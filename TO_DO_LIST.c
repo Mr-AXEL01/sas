@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 
       enum STATUS
@@ -35,23 +36,21 @@
       void addTodo();
       void editTodo();
       void deleteTodo();
-      void searchById();
-      void searchByTitle();
+      void searchTaskById();
+      void searchTaskByTitle(char *searchTitle);
       void displayStatistics();
-      void sortAlphabetically();
-      void sortByDeadline();
-      void displayNearDeadlineTasks();
 
       int main()
       {
           int choice;
           do
           {
-              printf("1. Manage Tasks\n");
-              printf("2. View Tasks\n");
-              printf("3. Edit Tasks\n");
-              printf("4. Search for Tasks\n");
-              printf("5. Statistics\n");
+              printf("1. See your to-do list\n");
+              printf("2. Add a new task\n");
+              printf("3. Edit a task\n");
+              printf("4. Delete a task\n");
+              printf("5. Search for tasks\n");
+              printf("6. Statistics\n");
               printf("0. Exit\n");
               printf("\n\nEnter your choice: ");
               scanf("%d", &choice);
@@ -59,34 +58,42 @@
               switch (choice)
               {
               case 1:
-                  addTodo();
+                  seeTodo();
                   break;
               case 2:
-                  seeTodo();
+                  addTodo();
                   break;
               case 3:
                   editTodo();
                   break;
               case 4:
-                  printf("1. Search by ID\n");
-                  printf("2. Search by Title\n");
-                  printf("Enter your choice: ");
+                  deleteTodo();
+                  break;
+              case 5:
+              {
                   int searchChoice;
+                  printf("1. Search by Identifier\n");
+                  printf("2. Search by Title\n");
+                  printf("Enter your search choice: ");
                   scanf("%d", &searchChoice);
                   if (searchChoice == 1)
                   {
-                      searchById();
+                      searchTaskById();
                   }
                   else if (searchChoice == 2)
                   {
-                      searchByTitle();
+                      char searchTitle[50];
+                      printf("Enter the title to search for: ");
+                      scanf("%s", searchTitle);
+                      searchTaskByTitle(searchTitle);
                   }
                   else
                   {
-                      printf("Invalid choice\n");
+                      printf("Invalid search choice\n");
                   }
-                  break;
-              case 5:
+              }
+              break;
+              case 6:
                   displayStatistics();
                   break;
               }
@@ -236,7 +243,7 @@
           }
       }
 
-      void searchById()
+      void searchTaskById()
       {
           int ID;
           printf("Enter the ID of the task you want to search for: ");
@@ -247,7 +254,8 @@
               if (tasks[i].id == ID)
               {
                   found = 1;
-                  printf("Task found with ID %d:\n", ID);
+                  printf("Task found:\n");
+                  printf("ID: %d\n", tasks[i].id);
                   printf("Title: %s\n", tasks[i].title);
                   printf("Description: %s\n", tasks[i].description);
                   printf("Deadline: %d\n", tasks[i].deadline);
@@ -264,7 +272,7 @@
                       printf("Done\n");
                       break;
                   }
-                  break; // Exit the loop once the task is found
+                  break;
               }
           }
           if (!found)
@@ -273,19 +281,32 @@
           }
       }
 
-      void searchByTitle()
+      void searchTaskByTitle(char *searchTitle)
       {
-          char title[50];
-          printf("Enter the title of the task you want to search for: ");
-          scanf("%49s", title);
+          // Convert the user's input to lowercase
+          for (int i = 0; searchTitle[i]; i++)
+          {
+              searchTitle[i] = tolower(searchTitle[i]);
+          }
+
+          // Search for tasks by title (case-insensitive)
           int found = 0;
           for (int i = 0; i < length; i++)
           {
-              if (strcmp(tasks[i].title, title) == 0)
+              char taskTitleLower[50]; // Make a lowercase copy of the task title
+              strcpy(taskTitleLower, tasks[i].title);
+              for (int j = 0; taskTitleLower[j]; j++)
+              {
+                  taskTitleLower[j] = tolower(taskTitleLower[j]);
+              }
+
+              // Compare the lowercase task title with the lowercase search title
+              if (strcmp(taskTitleLower, searchTitle) == 0)
               {
                   found = 1;
-                  printf("Task found with title '%s':\n", title);
+                  printf("Task found:\n");
                   printf("ID: %d\n", tasks[i].id);
+                  printf("Title: %s\n", tasks[i].title);
                   printf("Description: %s\n", tasks[i].description);
                   printf("Deadline: %d\n", tasks[i].deadline);
                   printf("Status: ");
@@ -301,12 +322,11 @@
                       printf("Done\n");
                       break;
                   }
-                  printf("\n");
               }
           }
           if (!found)
           {
-              printf("No tasks found with title '%s'.\n", title);
+              printf("No tasks with the title \"%s\" found.\n", searchTitle);
           }
       }
 
@@ -316,11 +336,8 @@
 
           int completeTasks = 0;
           int incompleteTasks = 0;
-          int nearDeadlineTasks = 0;
-
           time_t currentTime;
           time(&currentTime);
-          struct tm *currentDate = localtime(&currentTime);
 
           for (int i = 0; i < length; i++)
           {
@@ -333,83 +350,10 @@
                   incompleteTasks++;
               }
 
-              int daysRemaining = (tasks[i].deadline - (currentDate->tm_year + 1900) * 365 - (currentDate->tm_mon) * 30 - currentDate->tm_mday);
-              if (daysRemaining <= 3)
-              {
-                  nearDeadlineTasks++;
-              }
+              int daysRemaining = (tasks[i].deadline - currentTime) / (60 * 60 * 24); // Calculate days remaining
+              printf("Task %d - Days Remaining: %d\n", tasks[i].id, daysRemaining);
           }
 
           printf("Number of complete tasks: %d\n", completeTasks);
           printf("Number of incomplete tasks: %d\n", incompleteTasks);
-          printf("Number of tasks with deadline in 3 days or less: %d\n", nearDeadlineTasks);
-      }
-
-      void sortAlphabetically()
-      {
-          for (int i = 0; i < length - 1; i++)
-          {
-              for (int j = i + 1; j < length; j++)
-              {
-                  if (strcmp(tasks[i].title, tasks[j].title) > 0)
-                  {
-                      // Swap tasks[i] and tasks[j]
-                      struct TODO temp = tasks[i];
-                      tasks[i] = tasks[j];
-                      tasks[j] = temp;
-                  }
-              }
-          }
-      }
-
-      void sortByDeadline()
-      {
-          for (int i = 0; i < length - 1; i++)
-          {
-              for (int j = i + 1; j < length; j++)
-              {
-                  if (tasks[i].deadline > tasks[j].deadline)
-                  {
-                      // Swap tasks[i] and tasks[j]
-                      struct TODO temp = tasks[i];
-                      tasks[i] = tasks[j];
-                      tasks[j] = temp;
-                  }
-              }
-          }
-      }
-
-      void displayNearDeadlineTasks()
-      {
-          time_t currentTime;
-          time(&currentTime);
-          struct tm *currentDate = localtime(&currentTime);
-
-          printf("Tasks with deadline in 3 days or less:\n");
-
-          for (int i = 0; i < length; i++)
-          {
-              int daysRemaining = (tasks[i].deadline - (currentDate->tm_year + 1900) * 365 - (currentDate->tm_mon) * 30 - currentDate->tm_mday);
-              if (daysRemaining <= 3)
-              {
-                  printf("ID: %d\n", tasks[i].id);
-                  printf("Title: %s\n", tasks[i].title);
-                  printf("Description: %s\n", tasks[i].description);
-                  printf("Deadline: %d\n", tasks[i].deadline);
-                  printf("Status: ");
-                  switch (tasks[i].status)
-                  {
-                  case TO_DO:
-                      printf("To-Do\n");
-                      break;
-                  case DOING:
-                      printf("Doing\n");
-                      break;
-                  case DONE:
-                      printf("Done\n");
-                      break;
-                  }
-                  printf("\n");
-              }
-          }
       }
